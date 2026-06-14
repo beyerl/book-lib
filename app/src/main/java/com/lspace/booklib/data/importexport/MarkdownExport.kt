@@ -22,7 +22,7 @@ object MarkdownExport {
                 b.yearPublished?.let { sb.append(" ($it)") }
                 sb.append(stars)
                 val read = readRange(b)
-                if (read.isNotEmpty()) sb.append("  \n  _Read: $read_")
+                if (read.isNotEmpty()) sb.append("  \n  _Read: ${read}_")
                 sb.append('\n')
             }
             sb.append('\n')
