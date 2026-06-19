@@ -43,35 +43,41 @@ object GoodreadsCsv {
 
     /** Parses Goodreads CSV text into non-persisted books. Unknown columns are ignored. */
     fun import(text: String): List<Book> {
-        val rows = Csv.parse(text)
+        val rows = Csv.parse(text.removePrefix(BOM))
         if (rows.isEmpty()) return emptyList()
         val header = rows.first().map { it.trim() }
         fun idx(name: String) = header.indexOfFirst { it.equals(name, ignoreCase = true) }
         val iTitle = idx("Title")
         val iAuthor = idx("Author")
         val iIsbn = idx("ISBN")
+        val iIsbn13 = idx("ISBN13")
         val iRating = idx("My Rating")
+        val iReview = idx("My Review")
         val iDateRead = idx("Date Read")
         val iDateAdded = idx("Date Added")
+        val iBookshelves = idx("Bookshelves")
         val iExclusive = idx("Exclusive Shelf")
 
-        fun List<String>.at(i: Int): String? =
-            if (i in 0..lastIndex) this[i].trim().cleanIsbn().takeIf { it.isNotEmpty() } else null
+        fun List<String>.cell(i: Int): String? =
+            if (i in 0..lastIndex) this[i].trim().takeIf { it.isNotEmpty() } else null
 
         return rows.drop(1)
             .filter { it.any { cell -> cell.isNotBlank() } }
             .mapNotNull { cols ->
-                val title = if (iTitle in 0..cols.lastIndex) cols[iTitle].trim() else ""
-                if (title.isEmpty()) return@mapNotNull null
-                val shelf = Shelf.fromGoodreads(cols.getOrNull(iExclusive))
-                val rating = cols.getOrNull(iRating)?.trim()?.toIntOrNull()?.takeIf { it in 1..5 }
+                val title = cols.cell(iTitle) ?: return@mapNotNull null
+                val shelf = Shelf.fromGoodreads(cols.cell(iExclusive), cols.cell(iBookshelves))
+                val rating = cols.cell(iRating)?.toIntOrNull()?.takeIf { it in 1..5 }
+                // Goodreads writes an empty ISBN as ="" — clean before checking for content.
+                val isbn = listOf(iIsbn, iIsbn13)
+                    .firstNotNullOfOrNull { cols.cell(it)?.cleanIsbn()?.takeIf { s -> s.isNotEmpty() } }
                 val finished = DateUtil.parseOrNull(cols.getOrNull(iDateRead))
                 val added = DateUtil.parseOrNull(cols.getOrNull(iDateAdded)) ?: 0L
                 Book(
                     title = title,
-                    author = if (iAuthor in 0..cols.lastIndex) cols[iAuthor].trim() else "",
-                    isbn = cols.at(iIsbn),
+                    author = cols.cell(iAuthor).orEmpty(),
+                    isbn = isbn,
                     rating = rating,
+                    review = cols.cell(iReview),
                     shelf = shelf,
                     dateAdded = added,
                     dateFinishedReading = if (shelf == Shelf.FINISHED_READING) finished else null,
@@ -79,6 +85,8 @@ object GoodreadsCsv {
                 )
             }
     }
+
+    private const val BOM = "\uFEFF"
 
     // Goodreads wraps ISBNs as ="9780..." — strip the spreadsheet escaping.
     private fun String.cleanIsbn(): String =
