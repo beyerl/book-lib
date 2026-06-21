@@ -2,6 +2,8 @@ package com.lspace.booklib.ui.importexport
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lspace.booklib.data.importexport.BookwyrmCsv
+import com.lspace.booklib.data.importexport.CsvImport
 import com.lspace.booklib.data.importexport.GoodreadsCsv
 import com.lspace.booklib.data.importexport.MarkdownExport
 import com.lspace.booklib.data.repository.BookRepository
@@ -19,12 +21,14 @@ class ImportExportViewModel(
 
     suspend fun buildCsv(): String = GoodreadsCsv.export(repository.getAll())
 
+    suspend fun buildBookwyrmCsv(): String = BookwyrmCsv.export(repository.getAll())
+
     suspend fun buildMarkdown(): String = MarkdownExport.export(repository.getAll())
 
     fun importCsv(text: String) {
         viewModelScope.launch {
             try {
-                val books = GoodreadsCsv.import(text)
+                val books = CsvImport.import(text)
                 if (books.isEmpty()) {
                     _message.value = "No books found in that file."
                 } else {

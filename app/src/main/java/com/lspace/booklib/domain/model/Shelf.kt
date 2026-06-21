@@ -38,5 +38,33 @@ enum class Shelf(val displayName: String) {
             FINISHED_READING -> "read"
             STOPPED_READING -> "did-not-finish"
         }
+
+        /**
+         * Maps a BookWyrm "shelf" identifier to our shelves. BookWyrm uses the
+         * identifiers to-read / reading / read, plus a dedicated stopped-reading
+         * shelf for abandoned books.
+         */
+        fun fromBookwyrm(shelf: String?): Shelf = when (shelf?.trim()?.lowercase()) {
+            "reading", "currently-reading" -> NOW_READING
+            "read" -> FINISHED_READING
+            "stopped-reading", "stopped", "did-not-finish", "dnf", "abandoned" -> STOPPED_READING
+            else -> READING_LIST // "to-read" and unknown
+        }
+
+        /** The BookWyrm "shelf" identifier for this shelf. */
+        fun Shelf.toBookwyrm(): String = when (this) {
+            READING_LIST -> "to-read"
+            NOW_READING -> "reading"
+            FINISHED_READING -> "read"
+            STOPPED_READING -> "stopped-reading"
+        }
+
+        /** The BookWyrm "shelf_name" (human-readable) for this shelf. */
+        fun Shelf.toBookwyrmName(): String = when (this) {
+            READING_LIST -> "To Read"
+            NOW_READING -> "Currently Reading"
+            FINISHED_READING -> "Read"
+            STOPPED_READING -> "Stopped Reading"
+        }
     }
 }

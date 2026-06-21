@@ -68,6 +68,20 @@ fun ImportExportScreen(
         }
     }
 
+    val exportBookwyrm = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv"),
+    ) { uri: Uri? ->
+        if (uri == null) {
+            viewModel.reportExport("BookWyrm CSV", false)
+        } else {
+            scope.launch {
+                val content = viewModel.buildBookwyrmCsv()
+                val ok = writeText(context, uri, content)
+                viewModel.reportExport("BookWyrm CSV", ok)
+            }
+        }
+    }
+
     val exportMarkdown = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/markdown"),
     ) { uri: Uri? ->
@@ -116,12 +130,16 @@ fun ImportExportScreen(
         ) {
             SectionCard(
                 title = "Export",
-                body = "Save your library to a Goodreads-compatible CSV or a Markdown file.",
+                body = "Save your library to a Goodreads- or BookWyrm-compatible CSV, or a Markdown file.",
             ) {
                 Button(
                     onClick = { exportCsv.launch("lspace-library.csv") },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Export Goodreads CSV") }
+                OutlinedButton(
+                    onClick = { exportBookwyrm.launch("lspace-library-bookwyrm.csv") },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Export BookWyrm CSV") }
                 OutlinedButton(
                     onClick = { exportMarkdown.launch("lspace-library.md") },
                     modifier = Modifier.fillMaxWidth(),
@@ -130,12 +148,12 @@ fun ImportExportScreen(
 
             SectionCard(
                 title = "Import",
-                body = "Import books from a Goodreads CSV export. Existing shelves are mapped automatically.",
+                body = "Import books from a Goodreads or BookWyrm CSV export. The format is detected automatically and shelves are mapped for you.",
             ) {
                 Button(
                     onClick = { importCsv.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "*/*")) },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Import Goodreads CSV") }
+                ) { Text("Import CSV") }
             }
         }
     }
