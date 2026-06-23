@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.stateIn
 
 data class LibraryUiState(
     val selectedShelves: Set<Shelf> = Shelf.entries.toSet(),
+    val query: String = "",
     val pageSize: Int = 10,
     val page: Int = 0,
     val allMatching: List<Book> = emptyList(),
@@ -30,23 +31,38 @@ class LibraryViewModel(
 ) : ViewModel() {
 
     private val selectedShelves = MutableStateFlow(Shelf.entries.toSet())
+    private val query = MutableStateFlow("")
     private val pageSize = MutableStateFlow(10)
     private val page = MutableStateFlow(0)
 
     val uiState: StateFlow<LibraryUiState> = combine(
         bookRepository.observeAll(),
         selectedShelves,
+        query,
         pageSize,
         page,
-    ) { all, shelves, size, currentPage ->
-        val matching = all.filter { it.shelf in shelves }
+    ) { all, shelves, search, size, currentPage ->
+        val trimmed = search.trim()
+        val matching = all
+            .filter { it.shelf in shelves }
+            .filter { book ->
+                trimmed.isBlank() ||
+                    book.title.contains(trimmed, ignoreCase = true) ||
+                    book.author.contains(trimmed, ignoreCase = true)
+            }
         LibraryUiState(
             selectedShelves = shelves,
+            query = search,
             pageSize = size,
             page = currentPage,
             allMatching = matching,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
+
+    fun setQuery(value: String) {
+        query.value = value
+        page.value = 0
+    }
 
     fun toggleShelf(shelf: Shelf) {
         val current = selectedShelves.value

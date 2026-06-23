@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
@@ -20,6 +22,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,6 +77,23 @@ fun LibraryScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
+            OutlinedTextField(
+                value = state.query,
+                onValueChange = { viewModel.setQuery(it) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                singleLine = true,
+                label = { Text("Search your library") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (state.query.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.setQuery("") }) {
+                            Icon(Icons.Filled.Clear, contentDescription = "Clear search")
+                        }
+                    }
+                },
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,10 +111,17 @@ fun LibraryScreen(
             }
 
             if (state.allMatching.isEmpty()) {
-                EmptyState(
-                    title = "No books on these shelves",
-                    subtitle = "Search for books and add them to a shelf to fill your library.",
-                )
+                if (state.query.isNotBlank()) {
+                    EmptyState(
+                        title = "No matches",
+                        subtitle = "No books match \"${state.query}\" on these shelves.",
+                    )
+                } else {
+                    EmptyState(
+                        title = "No books on these shelves",
+                        subtitle = "Search for books and add them to a shelf to fill your library.",
+                    )
+                }
             } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(state.pageItems, key = { it.id }) { book ->
